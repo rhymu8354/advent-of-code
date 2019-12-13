@@ -194,7 +194,7 @@ int main(int argc, char* argv[]) {
     // For all other wires, check if each candidate position is also
     // touched by that wire.  If not, remove the candidate position.
     // By the end, the candidate positions are all the positions
-    // touched by all the wires.B
+    // touched by all the wires.
     auto wirePositionsEntry = wirePositions.begin();
     auto candidatePositions = *wirePositionsEntry;
     while (++wirePositionsEntry != wirePositions.end()) {
