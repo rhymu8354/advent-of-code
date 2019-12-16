@@ -352,6 +352,6 @@ int main(int argc, char* argv[]) {
         robotPosition += orientations[robotOrientation].delta;
         printf("Robot is now at %dx%d\n", robotPosition.x, robotPosition.y);
     }
-    printf("%zu panels were pained.\n", panels.size());
+    printf("%zu panels were painted.\n", panels.size());
     return EXIT_SUCCESS;
 }
