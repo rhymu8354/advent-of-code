@@ -14,6 +14,8 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <queue>
+#include <set>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stack>
@@ -23,22 +25,6 @@
 #ifdef _WIN32
 #include <crtdbg.h>
 #endif /* _WIN32 */
-
-#pragma once
-
-/**
- * @file PathFinding.hpp
- *
- * This module declares the PathFinding template.
- *
- * Copyright (c) 2018 by Richard Walters
- */
-
-#include <algorithm>
-#include <functional>
-#include <map>
-#include <queue>
-#include <vector>
 
 /**
  * This template is used to find a path from one position
