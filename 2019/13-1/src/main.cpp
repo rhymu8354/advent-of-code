@@ -308,10 +308,6 @@ int main(int argc, char* argv[]) {
 
     // Run the machine, taking the output as directives to draw
     // into the tiles.
-    int minX = 0;
-    int maxX = 0;
-    int minY = 0;
-    int maxY = 0;
     std::vector< intmax_t > output;
     machine.Run(output);
     if (!machine.halted) {
