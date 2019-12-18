@@ -946,7 +946,14 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Robot gave no output!\n");
         return EXIT_FAILURE;
     }
-    printf("Robot produced %zu output values.\n", output.size());   
+    printf("Robot produced %zu output values.\n", output.size());
+    for (size_t i = 0; i < output.size() - 1; ++i) {
+        if (output[i] == 10) {
+            printf("\n");
+        } else {
+            printf("%c", (char)output[i]);
+        }
+    }
     printf("Amount of dust collected: %" PRIdMAX "\n", output[output.size() - 1]);
     return EXIT_SUCCESS;
 }
