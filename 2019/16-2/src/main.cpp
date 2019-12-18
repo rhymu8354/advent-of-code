@@ -41,11 +41,9 @@ int main(int argc, char* argv[]) {
     (void)std::getline(input, line);
     std::vector< int > digits;
     const auto order = line.length();
-    digits.reserve(order * 10000);
-    for (size_t i = 0; i < 10000; ++i) {
-        for (auto ch: line) {
-            digits.push_back(ch - '0');
-        }
+    digits.reserve(order);
+    for (auto ch: line) {
+        digits.push_back(ch - '0');
     }
 
     // Compute the sine waves used in the "FFT".
@@ -74,23 +72,66 @@ int main(int argc, char* argv[]) {
     );
 
     // Apply a strategically small part of the "FFT" many times.
+    //
+    // Note that this only works if "offset" is at least half
+    // order * 10000 (it was for my input).
+    //
+    // At the "offset" column, base pattern is 1's all the way to the
+    // end, so this reduces the problem down to the following:
+    //
+    // 1. Start with the last digit.  This is also the last new digit,
+    //    because the base pattern is all 0's except for the last.
+    // 2. Walking backwards, each new previous digit is the next new digit
+    //    plus the previous digit.
+    //
+    // For example, consider this offset which is at least half-way
+    // through the digits:
+    //
+    // digits: 238741892741238946897643
+    // offset:              ^
+    //
+    // The new digits are built from the right.  First the last digit,
+    // which is the same always:
+    //
+    //     digits: 238741892741238946897643
+    // new digits:                        3
+    //
+    // Next, walking back, each digit is the sum of the digits above and
+    // to the right:
+    //
+    //     digits: 238741892741238946897643
+    // new digits:                       73
+    //                                  ↗
+    //                             4 + 3
+    //
+    // Continue until we reach the offset:
+    //
+    //     digits: 238741892741238946897643
+    // new digits:              74673790373
+    //     offset:              ^
+    //
     constexpr size_t iterations = 100;
+    const auto trailer = order * 10000 - offset;
+    decltype(digits) lastDigits;
+    lastDigits.reserve(trailer);
+    for (size_t i = order * 10000 - 1; i >= offset; --i) {
+        lastDigits.push_back(digits[i % order]);
+    }
     for (size_t i = 0; i < iterations; ++i) {
-        decltype(digits) newDigits;
-        newDigits.reserve(order);
-        int inner = 0;
-        int outer = 0;
-        for (size_t j = order * 10000 - 1; j >= offset + 7; --j) {
-            inner += digits[j];
+        decltype(lastDigits) newLastDigits(lastDigits);
+        int last = 0;
+        for (size_t j = 0; j < trailer; ++j) {
+            last = ((last + newLastDigits[j]) % 10);
+            newLastDigits[j] = last;
         }
-        for (size_t j = offset + 6; j >= offset; --j) {
-            outer += inner;
-            inner += digits[j];
-        }
-        digits.swap(newDigits);
-        printf("After %zu phases: ", i + 1);
-        for (auto digit: digits) {
-            printf("%d", digit);
+        lastDigits.swap(newLastDigits);
+        printf(
+            "After %zu phases, 8 digits starting at offset %d: ",
+            i + 1,
+            offset
+        );
+        for (size_t i = trailer - 1; i >= trailer - 8; --i) {
+            printf("%d", lastDigits[i]);
         }
         printf("\n");
     }
