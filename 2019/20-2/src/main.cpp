@@ -8,6 +8,7 @@
  */
 
 #include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <functional>
 #include <map>
@@ -537,6 +538,7 @@ int main(int argc, char* argv[]) {
 
     // Use the A* path-finding algorithm to find the shortest path
     // from the entrance to the exit.
+    const auto startTime = std::chrono::steady_clock::now();
     int deepestNeighborZ = 0;
     const auto path = PathFinding< Position<3> >::FindPath(
         // Desired start and end points of the path
@@ -559,6 +561,7 @@ int main(int argc, char* argv[]) {
         // considers different costs, but our cost is a constant).
         [](const Position<3>& start, const Position<3>& end){ return 0; }
     );
+    const auto endTime = std::chrono::steady_clock::now();
     printf("The shortest path through the maze is %d steps.\n", path.cost);
     int maxZ = 0;
     for (const auto& step: path.steps) {
@@ -566,5 +569,9 @@ int main(int argc, char* argv[]) {
     }
     printf("The deepest we went was %d steps down.\n", maxZ);
     printf("The deepest neighbor we considered was %d steps down.\n", deepestNeighborZ);
+    printf(
+        "It took %lf seconds to determine this.\n",
+        std::chrono::duration< double >(endTime - startTime).count()
+    );
     return EXIT_SUCCESS;
 }
