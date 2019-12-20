@@ -235,38 +235,46 @@ template< typename T > struct PathFinding {
     }
 };
 
-struct Position {
-    int x = 0;
-    int y = 0;
-    int z = 0;
+template< int N > struct Position {
+    std::vector< int > m;
 
     Position() {
+        m.resize(N);
     }
 
-    Position(
-        int x,
-        int y,
-        int z
-    )
-        : x(x)
-        , y(y)
-        , z(z)
-    {
+    Position(std::initializer_list< int > list) {
+        m.resize(N);
+        size_t i = 0;
+        for (auto element: list) {
+            m[i++] = element;
+        }
+    }
+
+    Position(const Position<N-1>& other) {
+        m.resize(N);
+        for (size_t i = 0; i < N - 1; ++i) {
+            m[i] = other.m[i];
+        }
+    }
+
+    template< int M > Position<M> Reduce() const {
+        Position<M> reduction;
+        for (size_t i = 0; i < M; ++i) {
+            if (i >= N) {
+                break;
+            }
+            reduction.m[i] = m[i];
+        }
+        return reduction;
     }
 
     bool operator==(const Position& other) const {
-        return (
-            (x == other.x)
-            && (y == other.y)
-            && (z == other.z)
-        );
-    }
-
-    bool EqualDisregardingZ(const Position& other) const {
-        return (
-            (x == other.x)
-            && (y == other.y)
-        );
+        for (size_t i = 0; i < N; ++i) {
+            if (m[i] != other.m[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     bool operator!=(const Position& other) const {
@@ -274,203 +282,165 @@ struct Position {
     }
 
     bool operator<(const Position& other) const {
-        if (z < other.z) {
-            return true;
-        } else if (z > other.z) {
-            return false;
-        } else if (y < other.y) {
-            return true;
-        } else if (y > other.y) {
-            return false;
-        } else {
-            return (x < other.x);
+        for (size_t i = 0; i < N; ++i) {
+            if (m[i] < other.m[i]) {
+                return true;
+            } else if (m[i] > other.m[i]) {
+                return false;
+            }
         }
+        return false;
     }
 
     Position& operator+=(const Position& other) {
-        x += other.x;
-        y += other.y;
-        z += other.z;
+        for (size_t i = 0; i < N; ++i) {
+            m[i] += other.m[i];
+        }
+        return *this;
+    }
+
+    Position& operator-=(const Position& other) {
+        for (size_t i = 0; i < N; ++i) {
+            m[i] -= other.m[i];
+        }
         return *this;
     }
 
     Position operator+(const Position& other) const {
         Position sum = *this;
-        sum.x += other.x;
-        sum.y += other.y;
-        sum.z += other.z;
-        return sum;
+        return sum += other;
     }
 
     Position operator-(const Position& other) const {
         Position sum = *this;
-        sum.x -= other.x;
-        sum.y -= other.y;
-        sum.z -= other.z;
-        return sum;
-    }
-};
-
-bool InBounds(
-    const Position& position,
-    size_t width,
-    size_t height
-) {
-    return (
-        (position.x >= 0)
-        && (position.x < (int)width)
-        && (position.y >= 0)
-        && (position.y < (int)height)
-    );
-}
-
-struct CompareDisregardingZ {
-    bool operator()(
-        const Position& lhs,
-        const Position& rhs
-    ) const {
-        if (lhs.y < rhs.y) {
-            return true;
-        } else if (lhs.y > rhs.y) {
-            return false;
-        } else {
-            return (lhs.x < rhs.x);
-        }
+        return sum -= other;
     }
 };
 
 using PortalPositions = std::map<
-    Position,
-    std::string,
-    CompareDisregardingZ
+    Position<2>,
+    std::string
 >;
 
-std::vector< Position > Neighbors(
-    const std::vector< std::string >& lines,
-    const std::map< std::string, std::pair< Position, Position > >& portals,
-    const PortalPositions& portalPositions,
-    const Position& position
-) {
-    std::vector< Position > neighbors;
-    static const std::vector< Position > directions = {
-        {-1,  0, 0},
-        { 1,  0, 0},
-        { 0, -1, 0},
-        { 0,  1, 0},
-    };
-    const auto height = lines.size();
-    const auto width = lines[0].length();
-    for (const auto& direction: directions) {
-        const auto neighbor = position + direction;
-        if (InBounds(neighbor, width, height)) {
-            const auto cell = lines[neighbor.y][neighbor.x];
-            if (
-                (cell == '.')
-                || (cell == '#')
-            ) {
-                neighbors.push_back(neighbor);
-            }
+using Portals = std::map<
+    std::string,
+    std::pair< Position<2>, Position<2> >
+>;
+
+struct Maze {
+    // Properties
+
+    std::vector< std::string > lines;
+    size_t width = 0;
+    size_t height = 0;
+
+    // Methods
+
+    void Input(std::string&& line) {
+        lines.push_back(std::move(line));
+        if (lines.size() == 1) {
+            width = lines[0].length();
+        }
+        height = lines.size();
+    }
+
+    bool InBounds(const Position<2>& position) const {
+        return (
+            (position.m[0] >= 0)
+            && (position.m[0] < (int)width)
+            && (position.m[1] >= 0)
+            && (position.m[1] < (int)height)
+        );
+    }
+
+    char CellAt(const Position<2>& position) const {
+        if (InBounds(position)) {
+            return lines[position.m[1]][position.m[0]];
+        } else {
+            return ' ';
         }
     }
-    const auto portalPositionsEntry = portalPositions.find(position);
+
+    char CheckForPortal(const Position<2>& position) const {
+        const auto cell = CellAt(position);
+        if (
+            (cell >= 'A')
+            && (cell <= 'Z')
+        ) {
+            return cell;
+        } else {
+            return 0;
+        }
+    }
+
+    bool IsFloor(const Position<2>& position) const {
+        const auto cell = CellAt(position);
+        return (cell == '.');
+    }
+
+    bool IsOuterEdge(const Position<2>& position) const {
+        if (position.m[0] < 3) {
+            return true;
+        } else if (position.m[0] + 3 >= (int)width) {
+            return true;
+        } else if (position.m[1] < 3) {
+            return true;
+        } else if (position.m[1] + 3 >= (int)height) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+};
+
+std::vector< Position<3> > Neighbors(
+    const Maze& maze,
+    const Portals& portals,
+    const PortalPositions& portalPositions,
+    const Position<3>& position,
+    int& deepestNeighborZ
+) {
+    std::vector< Position<3> > neighbors;
+    static const std::vector< Position<2> > directions = {
+        {-1,  0},
+        { 1,  0},
+        { 0, -1},
+        { 0,  1},
+    };
+
+    // Adjacent positions which have a floor are always neighbors.
+    for (const auto& direction: directions) {
+        const auto neighbor = position + direction;
+        const auto cell = maze.CellAt(neighbor.Reduce<2>());
+        if (cell == '.') {
+            neighbors.push_back(neighbor);
+        }
+    }
+
+    // If the position is next to a portal, add the other side
+    // of the portal as a neighbor.
+    const auto reducedPosition = position.Reduce<2>();
+    const auto portalPositionsEntry = portalPositions.find(reducedPosition);
     if (portalPositionsEntry != portalPositions.end()) {
         const auto& portalsEntry = portals.find(portalPositionsEntry->second);
         const auto& portal = portalsEntry->second;
-        const auto goingOut = position.EqualDisregardingZ(portal.first);
-        auto otherSideOfPortal = (
+        const auto goingOut = reducedPosition == portal.first;
+        Position<3> otherSideOfPortal = (
             goingOut
             ? portal.second
             : portal.first
         );
-        otherSideOfPortal.z = position.z + (goingOut ? -1 : 1);
-        if (otherSideOfPortal.z >= 0) {
+        otherSideOfPortal.m[2] = position.m[2] + (goingOut ? -1 : 1);
+
+        // You can't use a portal leading out if you're already at
+        // the outer-most level.
+        if (otherSideOfPortal.m[2] >= 0) {
             neighbors.push_back(otherSideOfPortal);
+            deepestNeighborZ = std::max(deepestNeighborZ, otherSideOfPortal.m[2]);
         }
     }
     return neighbors;
-}
-
-int Cost(
-    const std::vector< std::string >& lines,
-    const std::map< std::string, std::pair< Position, Position > >& portals,
-    const Position& start,
-    const Position& end
-) {
-    const auto height = lines.size();
-    const auto width = lines[0].length();
-    const auto cell = lines[end.y][end.x];
-    if (cell == '#') {
-        return 1000001;
-    } else if (cell == '.') {
-        return 1;
-    }
-    return 0;
-}
-
-int PositionHeuristic(const Position& start, const Position& end) {
-    // Normally I would use manhattan distance for A* heuristic,
-    // but in this puzzle, it is not admissible.
-    // So just devolve to Dijkstra's Algorithm.
-    //
-    // [11:14] igroc: https://en.wikipedia.org/wiki/Admissible_heuristic
-    // -------------------------------------------------------------------
-    //
-    // return (
-    //     abs(end.x - start.x)
-    //     + abs(end.y - start.y)
-    // );
-    return 0;
-}
-
-char CheckForPortal(
-    const std::vector< std::string >& lines,
-    const Position& position
-) {
-    const auto height = lines.size();
-    const auto width = lines[0].length();
-    if (!InBounds(position, width, height)) {
-        return 0;
-    }
-    const auto cell = lines[position.y][position.x];
-    if (
-        (cell >= 'A')
-        && (cell <= 'Z')
-    ) {
-        return cell;
-    } else {
-        return 0;
-    }
-}
-
-bool IsFloor(
-    const std::vector< std::string >& lines,
-    const Position& position
-) {
-    const auto height = lines.size();
-    const auto width = lines[0].length();
-    if (!InBounds(position, width, height)) {
-        return 0;
-    }
-    const auto cell = lines[position.y][position.x];
-    return (cell == '.');
-}
-
-bool IsOuterEdge(
-    const Position& position,
-    size_t width,
-    size_t height
-) {
-    if (position.x < 3) {
-        return true;
-    } else if (position.x + 3 >= (int)width) {
-        return true;
-    } else if (position.y < 3) {
-        return true;
-    } else if (position.y + 3 >= (int)height) {
-        return true;
-    } else {
-        return false;
-    }
 }
 
 /**
@@ -491,37 +461,34 @@ int main(int argc, char* argv[]) {
 
     // Open the input file and read in the map.
     std::ifstream input("input.txt");
-    std::vector< std::string > lines;
+    Maze maze;
     std::string line;
     while (std::getline(input, line)) {
-        lines.push_back(std::move(line));
-        line.clear();
+        maze.Input(std::move(line));
     }
 
     // Scan the map for the starting position, ending position,
     // and the positions of all portals.
-    const auto height = lines.size();
-    const auto width = lines[0].length();
-    Position startingPosition, endingPosition;
-    std::map< std::string, std::pair< Position, Position > > portals;
+    Position<2> startingPosition, endingPosition;
+    Portals portals;
     PortalPositions portalPositions;
-    for (size_t y = 0; y < height; ++y) {
-        for (size_t x = 0; x < width; ++x) {
-            const Position cellPosition((int)x, (int)y, 0);
-            const auto cell = CheckForPortal(lines, cellPosition);
+    for (size_t y = 0; y < maze.height; ++y) {
+        for (size_t x = 0; x < maze.width; ++x) {
+            const Position<2> cellPosition{(int)x, (int)y};
+            const auto cell = maze.CheckForPortal(cellPosition);
             if (cell) {
-                static std::vector< Position > directions{
-                    { 0,  1, 0},
-                    { 1,  0, 0},
+                static std::vector< Position<2> > directions{
+                    {0,  1},
+                    {1,  0},
                 };
                 for (const auto& direction: directions) {
                     const auto neighbor = cellPosition + direction;
-                    const auto cell2 = CheckForPortal(lines, neighbor);
+                    const auto cell2 = maze.CheckForPortal(neighbor);
                     if (cell2) {
                         const auto before = cellPosition - direction;
                         const auto after = neighbor + direction;
                         const auto portalFloor = (
-                            IsFloor(lines, before)
+                            maze.IsFloor(before)
                             ? before
                             : after
                         );
@@ -539,7 +506,7 @@ int main(int argc, char* argv[]) {
                             if (portalsEntry == portals.end()) {
                                 portals[portalLabel] = {portalFloor, portalFloor};
                             } else {
-                                if (IsOuterEdge(portalFloor, width, height)) {
+                                if (maze.IsOuterEdge(portalFloor)) {
                                     portalsEntry->second.first = portalFloor;
                                 } else {
                                     portalsEntry->second.second = portalFloor;
@@ -554,35 +521,50 @@ int main(int argc, char* argv[]) {
     }
     printf(
         "Map is %zux%zu, entrance is at %dx%d, exit is at %dx%d, and there are %zu portals.\n",
-        width, height,
-        startingPosition.x, startingPosition.y,
-        endingPosition.x, endingPosition.y,
+        maze.width, maze.height,
+        startingPosition.m[0], startingPosition.m[1],
+        endingPosition.m[0], endingPosition.m[1],
         portals.size()
     );
     for (const auto& portal: portals) {
         printf(
             "  %s: %dx%d <-> %dx%d\n",
             portal.first.c_str(),
-            portal.second.first.x, portal.second.first.y,
-            portal.second.second.x, portal.second.second.y
+            portal.second.first.m[0], portal.second.first.m[1],
+            portal.second.second.m[0], portal.second.second.m[1]
         );
     }
 
     // Use the A* path-finding algorithm to find the shortest path
     // from the entrance to the exit.
-    const auto path = PathFinding< Position >::FindPath(
-        startingPosition,
-        endingPosition,
-        [&](const Position& position){ return Neighbors(lines, portals, portalPositions, position); },
-        [&](const Position& start, const Position& end){ return Cost(lines, portals, start, end); },
-        PositionHeuristic,
-        1000000
+    int deepestNeighborZ = 0;
+    const auto path = PathFinding< Position<3> >::FindPath(
+        // Desired start and end points of the path
+        startingPosition, endingPosition,
+
+        // Function to determine the neighbors of any position
+        [&](const Position<3>& position){ return Neighbors(maze, portals, portalPositions, position, deepestNeighborZ); },
+
+        // Cost function (easy since the neighbors function takes
+        // care of walls for us).
+        [](const Position<3>& start, const Position<3>& end){ return 1; },
+
+        // Heuristic function, which A* uses to optimize the search.
+        // I didn't bother making one.  I usually use manhattan distance,
+        // however in this puzzle, is inadmissible.
+        //
+        // [11:14] igroc: https://en.wikipedia.org/wiki/Admissible_heuristic
+        //
+        // So just devolve to Breadth First Search (Dijkstra's Algorithm
+        // considers different costs, but our cost is a constant).
+        [](const Position<3>& start, const Position<3>& end){ return 0; }
     );
     printf("The shortest path through the maze is %d steps.\n", path.cost);
     int maxZ = 0;
     for (const auto& step: path.steps) {
-        maxZ = std::max(maxZ, step.z);
+        maxZ = std::max(maxZ, step.m[2]);
     }
     printf("The deepest we went was %d steps down.\n", maxZ);
+    printf("The deepest neighbor we considered was %d steps down.\n", deepestNeighborZ);
     return EXIT_SUCCESS;
 }
