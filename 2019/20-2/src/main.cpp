@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
+#include <string.h>
 #include <vector>
 
 #ifdef _WIN32
@@ -237,14 +238,13 @@ template< typename T > struct PathFinding {
 };
 
 template< int N > struct Position {
-    std::vector< int > m;
+    int m[N];
 
     Position() {
-        m.resize(N);
+        (void)memset(m, 0, sizeof(m));
     }
 
     Position(std::initializer_list< int > list) {
-        m.resize(N);
         size_t i = 0;
         for (auto element: list) {
             m[i++] = element;
@@ -252,7 +252,7 @@ template< int N > struct Position {
     }
 
     Position(const Position<N-1>& other) {
-        m.resize(N);
+        (void)memset(m, 0, sizeof(m));
         for (size_t i = 0; i < N - 1; ++i) {
             m[i] = other.m[i];
         }
