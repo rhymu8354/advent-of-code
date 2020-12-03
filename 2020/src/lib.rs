@@ -30,26 +30,27 @@ where
     total / iterations as u32
 }
 
-fn solve<T, U, P, S>(
+fn solve<Intermediate, Solution, Parser, Solver>(
     input: &str,
-    parse: &P,
-    solve_already_parsed: &S,
-) -> Option<U>
+    parse: &Parser,
+    solve_already_parsed: &Solver,
+) -> Option<Solution>
 where
-    P: Fn(&str) -> T,
-    S: Fn(&T) -> Option<U>,
+    Parser: Fn(&str) -> Intermediate,
+    Solver: Fn(&Intermediate) -> Option<Solution>,
+    Solution: Debug + Display + PartialEq,
 {
     solve_already_parsed(&parse(input))
 }
 
-pub fn benchmarked_main<T, U, P, S>(
-    parse: P,
-    solve_already_parsed: S,
+pub fn benchmarked_main<Intermediate, Solution, Parser, Solver>(
+    parse: Parser,
+    solve_already_parsed: Solver,
     iterations: usize,
 ) where
-    P: Fn(&str) -> T,
-    S: Fn(&T) -> Option<U>,
-    U: Debug + Display + PartialEq,
+    Parser: Fn(&str) -> Intermediate,
+    Solver: Fn(&Intermediate) -> Option<Solution>,
+    Solution: Debug + Display + PartialEq,
 {
     let mut input = String::new();
     stdin().read_to_string(&mut input).unwrap();
