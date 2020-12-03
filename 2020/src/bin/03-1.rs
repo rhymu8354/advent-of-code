@@ -1,14 +1,3 @@
-use std::{
-    io::{
-        stdin,
-        Read,
-    },
-    time::{
-        Duration,
-        Instant,
-    },
-};
-
 use aoc_2020::benchmarked_main;
 
 fn parse(input: &str) -> Vec<Vec<char>> {
