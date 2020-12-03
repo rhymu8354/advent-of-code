@@ -9,6 +9,8 @@ use std::{
     },
 };
 
+use aoc_2020::benchmarked_main;
+
 struct PasswordWithPolicy<'a> {
     min: usize,
     max: usize,
@@ -66,63 +68,29 @@ fn is_valid_password(
     (*min..=*max).contains(&count)
 }
 
-fn parse(input: &str) -> Vec<PasswordWithPolicy> {
+fn parse<'a, 'b>(input: &'a str) -> Vec<PasswordWithPolicy<'b>>
+where
+    'a: 'b,
+{
     input.lines().map(|line| scan(line.trim())).collect()
 }
 
-fn solve_already_parsed(input: &[PasswordWithPolicy]) -> usize {
-    input
-        .iter()
-        .filter(|password_with_policy| is_valid_password(password_with_policy))
-        .count()
-}
-
-fn solve(input: &str) -> usize {
-    solve_already_parsed(&parse(input))
+fn solve_already_parsed<'a, 'b, T: AsRef<[PasswordWithPolicy<'a>]>>(
+    input: &'b T
+) -> Option<usize> {
+    let input = input.as_ref();
+    Some(
+        input
+            .iter()
+            .filter(|password_with_policy| {
+                is_valid_password(password_with_policy)
+            })
+            .count(),
+    )
 }
 
 const ITERATIONS: usize = 10000;
 
 fn main() {
-    let mut input = String::new();
-    stdin().read_to_string(&mut input).unwrap();
-    let solution = solve(&input);
-    println!("Solution: {}", solution);
-    let mut overhead = Duration::default();
-    for _ in 0..ITERATIONS {
-        let start = Instant::now();
-        let elapsed = start.elapsed();
-        overhead += elapsed;
-    }
-    let mut total = Duration::default();
-    for _ in 0..ITERATIONS {
-        let start = Instant::now();
-        let solution_repeat = solve(&input);
-        assert_eq!(solution_repeat, solution);
-        let elapsed = start.elapsed();
-        total += elapsed;
-    }
-    let map = parse(&input);
-    let mut total_without_parsing = Duration::default();
-    for _ in 0..ITERATIONS {
-        let start = Instant::now();
-        let solution_repeat = solve_already_parsed(&map);
-        assert_eq!(solution_repeat, solution);
-        let elapsed = start.elapsed();
-        total_without_parsing += elapsed;
-    }
-    println!("Time (with parsing): {:?}", total / ITERATIONS as u32);
-    println!(
-        "Time (without parsing): {:?}",
-        total_without_parsing / ITERATIONS as u32
-    );
-    println!("Overhead: {:?}", overhead / ITERATIONS as u32);
-    println!(
-        "Time (with parsing) - Overhead: {:?}",
-        (total - overhead) / ITERATIONS as u32
-    );
-    println!(
-        "Time (without parsing) - Overhead: {:?}",
-        (total_without_parsing - overhead) / ITERATIONS as u32
-    );
+    benchmarked_main(parse, solve_already_parsed, ITERATIONS);
 }
