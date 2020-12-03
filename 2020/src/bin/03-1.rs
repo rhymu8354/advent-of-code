@@ -16,15 +16,21 @@ fn parse(input: &str) -> Vec<Vec<char>> {
         .collect::<Vec<_>>()
 }
 
+const SLOPE_X: usize = 3;
+
+fn try_path(
+    map: &[Vec<char>],
+    cols: usize,
+) -> usize {
+    map.iter()
+        .enumerate()
+        .filter(|(i, row)| row[(i * SLOPE_X) % cols] == '#')
+        .count()
+}
+
 fn solve_already_parsed(map: &[Vec<char>]) -> Option<usize> {
     if let Some(row) = map.get(0) {
-        let cols = row.len();
-        let trees = map
-            .iter()
-            .enumerate()
-            .filter(|(i, row)| row[(i * 3) % cols] == '#')
-            .count();
-        Some(trees)
+        Some(try_path(map, row.len()))
     } else {
         None
     }
