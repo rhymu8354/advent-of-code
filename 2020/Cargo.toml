@@ -34,6 +34,62 @@ path = "src/bin/03-1.rs"
 name = "aoc-2020-03-2"
 path = "src/bin/03-2.rs"
 
+[[bin]]
+name = "aoc-2020-04-1"
+path = "src/bin/04-1.rs"
+
+[[bin]]
+name = "aoc-2020-04-2"
+path = "src/bin/04-2.rs"
+
+[[bin]]
+name = "aoc-2020-05-1"
+path = "src/bin/05-1.rs"
+
+[[bin]]
+name = "aoc-2020-05-2"
+path = "src/bin/05-2.rs"
+
+[[bin]]
+name = "aoc-2020-06-1"
+path = "src/bin/06-1.rs"
+
+[[bin]]
+name = "aoc-2020-06-2"
+path = "src/bin/06-2.rs"
+
+[[bin]]
+name = "aoc-2020-07-1"
+path = "src/bin/07-1.rs"
+
+[[bin]]
+name = "aoc-2020-07-2"
+path = "src/bin/07-2.rs"
+
+[[bin]]
+name = "aoc-2020-08-1"
+path = "src/bin/08-1.rs"
+
+[[bin]]
+name = "aoc-2020-08-2"
+path = "src/bin/08-2.rs"
+
+[[bin]]
+name = "aoc-2020-09-1"
+path = "src/bin/09-1.rs"
+
+[[bin]]
+name = "aoc-2020-09-2"
+path = "src/bin/09-2.rs"
+
+[[bin]]
+name = "aoc-2020-10-1"
+path = "src/bin/10-1.rs"
+
+[[bin]]
+name = "aoc-2020-10-2"
+path = "src/bin/10-2.rs"
+
 [dependencies]
 # anyhow = "1.0"
 # async-ctrlc = "1.2"
