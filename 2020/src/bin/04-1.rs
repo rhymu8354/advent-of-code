@@ -1,34 +1,66 @@
 use aoc_2020::benchmarked_main;
 
-fn parse(input: &str) -> Vec<Vec<char>> {
-    input
-        .lines()
-        .map(|line| line.trim().chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>()
+#[derive(Debug)]
+struct Passport {
+    fields: Vec<Option<String>>,
 }
 
-const SLOPE_X: usize = 3;
-
-fn try_path(
-    map: &[Vec<char>],
-    cols: usize,
-) -> usize {
-    map.iter()
-        .enumerate()
-        .filter(|(i, row)| row[(i * SLOPE_X) % cols] == '#')
-        .count()
-}
-
-fn solve_already_parsed<T: AsRef<[Vec<char>]>>(map: &T) -> Option<usize> {
-    let map = map.as_ref();
-    if let Some(row) = map.get(0) {
-        Some(try_path(map, row.len()))
-    } else {
-        None
+impl Default for Passport {
+    fn default() -> Self {
+        Self {
+            fields: vec![None; 8],
+        }
     }
 }
 
-const ITERATIONS: usize = 10000;
+fn parse(input: &str) -> Vec<Passport> {
+    let keys = ["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid", "cid"];
+
+    let mut passports = Vec::new();
+    let mut passport = Passport::default();
+    for line in input.lines().map(|line| line.trim()) {
+        if line.is_empty() {
+            let mut new_passport = Passport::default();
+            std::mem::swap(&mut passport, &mut new_passport);
+            passports.push(new_passport);
+        } else {
+            for key_value in line.split(' ') {
+                let mut key_value = key_value.split(':');
+                let this_key = key_value.next().unwrap();
+                let value = key_value.next().unwrap();
+                let i = keys
+                    .iter()
+                    .enumerate()
+                    .find(|(_, key)| **key == this_key)
+                    .unwrap()
+                    .0;
+                passport.fields[i] = Some(String::from(value));
+            }
+        }
+    }
+    passports.push(passport);
+    passports
+}
+
+fn solve_already_parsed<T: AsRef<[Passport]>>(input: &T) -> Option<usize> {
+    let input = input.as_ref();
+    Some(
+        input
+            .iter()
+            .filter(|passport| {
+                passport
+                    .fields
+                    .iter()
+                    .take(7)
+                    .filter(|value| value.is_none())
+                    .count()
+                    == 0
+            })
+            .count(),
+    )
+}
+
+const ITERATIONS: usize = 4000;
 
 fn main() {
     benchmarked_main(parse, solve_already_parsed, ITERATIONS);
