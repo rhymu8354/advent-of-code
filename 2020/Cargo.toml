@@ -10,6 +10,10 @@ categories = []
 keywords = ["aoc"]
 repository = "https://github.com/rhymu8354/advent-of-code.git"
 
+[features]
+default = []
+visualize = []
+
 [[bin]]
 name = "aoc-2020-01-1"
 path = "src/bin/01-1.rs"

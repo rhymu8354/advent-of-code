@@ -43,6 +43,20 @@ where
     solve_already_parsed(&parse(input))
 }
 
+pub fn unbenchmarked_main<Intermediate, Solution, Parser, Solver>(
+    parse: Parser,
+    solve_already_parsed: Solver,
+) where
+    Parser: Fn(&str) -> Intermediate,
+    Solver: Fn(&Intermediate) -> Option<Solution>,
+    Solution: Debug + Display + PartialEq,
+{
+    let mut input = String::new();
+    stdin().read_to_string(&mut input).unwrap();
+    let solution = solve(&input, &parse, &solve_already_parsed).unwrap();
+    println!("Solution: {}", solution);
+}
+
 pub fn benchmarked_main<Intermediate, Solution, Parser, Solver>(
     parse: Parser,
     solve_already_parsed: Solver,
