@@ -20,22 +20,19 @@ fn chomp_bag(line: &str) -> (String, &str) {
 }
 
 fn split_on_next_number(input: &str) -> Option<(usize, &str)> {
-    if let Some(start) = input.find(|ch: char| ch.is_digit(10)) {
+    input.find(|ch: char| ch.is_digit(10)).map(|start| {
         let input = &input[start..];
         let end = input.find(|ch: char| !ch.is_digit(10)).unwrap();
-        Some((input[..end].parse().unwrap(), &input[end..]))
-    } else {
-        None
-    }
+        (input[..end].parse().unwrap(), &input[end..])
+    })
 }
 
 fn parse(input: &str) -> HashMap<String, Bag> {
     input
         .lines()
         .map(|line| {
-            let (color, rest) = chomp_bag(line);
+            let (color, mut line) = chomp_bag(line);
             let mut bag = Bag::default();
-            let mut line = rest;
             while let Some((quantity, rest)) = split_on_next_number(line) {
                 let (color, rest) = chomp_bag(rest);
                 *bag.entry(color).or_default() += quantity;
