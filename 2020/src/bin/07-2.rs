@@ -1,34 +1,76 @@
 use aoc_2020::benchmarked_main;
+use std::collections::HashMap;
 
-fn parse(input: &str) -> Vec<Vec<char>> {
-    input
-        .lines()
-        .map(|line| line.trim().chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>()
+type Bag = HashMap<String, usize>;
+
+fn chomp<'a>(
+    line: &'a str,
+    delimiter: &str,
+) -> (&'a str, &'a str) {
+    let mut parts = line.splitn(2, delimiter);
+    let left = parts.next().unwrap();
+    let right = parts.next().unwrap();
+    (left, right)
 }
 
-const SLOPE_X: usize = 3;
-
-fn try_path(
-    map: &[Vec<char>],
-    cols: usize,
-) -> usize {
-    map.iter()
-        .enumerate()
-        .filter(|(i, row)| row[(i * SLOPE_X) % cols] == '#')
-        .count()
+fn chomp_bag(line: &str) -> (String, &str) {
+    let (color, rest) = chomp(line, "bag");
+    let color = String::from(color.trim());
+    (color, rest)
 }
 
-fn solve_already_parsed<T: AsRef<[Vec<char>]>>(map: &T) -> Option<usize> {
-    let map = map.as_ref();
-    if let Some(row) = map.get(0) {
-        Some(try_path(map, row.len()))
+fn split_on_next_number(input: &str) -> Option<(usize, &str)> {
+    if let Some(start) = input.find(|ch: char| ch.is_digit(10)) {
+        let input = &input[start..];
+        let end = input.find(|ch: char| !ch.is_digit(10)).unwrap();
+        Some((input[..end].parse().unwrap(), &input[end..]))
     } else {
         None
     }
 }
 
-const ITERATIONS: usize = 10000;
+fn parse(input: &str) -> HashMap<String, Bag> {
+    input
+        .lines()
+        .map(|line| {
+            let (color, rest) = chomp_bag(line);
+            let mut bag = Bag::default();
+            let mut line = rest;
+            while let Some((quantity, rest)) = split_on_next_number(line) {
+                let (color, rest) = chomp_bag(rest);
+                *bag.entry(color).or_default() += quantity;
+                line = rest;
+            }
+            (color, bag)
+        })
+        .collect::<HashMap<_, _>>()
+}
+
+fn expand_bag(
+    rules: &HashMap<String, Bag>,
+    outer_color: &str,
+    outer_quantity: usize,
+) -> usize {
+    let bag = &rules[outer_color];
+    if bag.is_empty() {
+        outer_quantity
+    } else {
+        outer_quantity
+            + bag
+                .iter()
+                .map(|(color, quantity)| {
+                    let inner_quantity = quantity * outer_quantity;
+                    expand_bag(rules, color, inner_quantity)
+                })
+                .sum::<usize>()
+    }
+}
+
+fn solve_already_parsed(rules: &HashMap<String, Bag>) -> Option<usize> {
+    Some(expand_bag(rules, "shiny gold", 1) - 1)
+}
+
+const ITERATIONS: usize = 1000;
 
 fn main() {
     benchmarked_main(parse, solve_already_parsed, ITERATIONS);
