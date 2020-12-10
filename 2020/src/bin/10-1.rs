@@ -1,31 +1,18 @@
 use aoc_2020::benchmarked_main;
 
-fn parse(input: &str) -> Vec<Vec<char>> {
-    input
-        .lines()
-        .map(|line| line.trim().chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>()
+fn parse(input: &str) -> Vec<usize> {
+    input.lines().map(|line| line.parse().unwrap()).collect::<Vec<_>>()
 }
 
-const SLOPE_X: usize = 3;
-
-fn try_path(
-    map: &[Vec<char>],
-    cols: usize,
-) -> usize {
-    map.iter()
-        .enumerate()
-        .filter(|(i, row)| row[(i * SLOPE_X) % cols] == '#')
-        .count()
-}
-
-fn solve_already_parsed<T: AsRef<[Vec<char>]>>(map: &T) -> Option<usize> {
-    let map = map.as_ref();
-    if let Some(row) = map.get(0) {
-        Some(try_path(map, row.len()))
-    } else {
-        None
-    }
+fn solve_already_parsed<T: AsRef<[usize]>>(input: &T) -> Option<usize> {
+    let mut input = input.as_ref().to_vec();
+    input.push(0);
+    input.sort_unstable();
+    let mut jumps = [0; 3];
+    input.windows(2).for_each(|adapters| {
+        jumps[adapters[1] - adapters[0] - 1] += 1;
+    });
+    Some(jumps[0] * (jumps[2] + 1))
 }
 
 const ITERATIONS: usize = 10000;

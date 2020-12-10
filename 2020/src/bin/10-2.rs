@@ -1,31 +1,48 @@
 use aoc_2020::benchmarked_main;
+use std::collections::{
+    hash_map::Entry,
+    BinaryHeap,
+    HashMap,
+    HashSet,
+};
 
-fn parse(input: &str) -> Vec<Vec<char>> {
-    input
-        .lines()
-        .map(|line| line.trim().chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>()
+fn parse(input: &str) -> Vec<usize> {
+    input.lines().map(|line| line.parse().unwrap()).collect::<Vec<_>>()
 }
 
-const SLOPE_X: usize = 3;
-
-fn try_path(
-    map: &[Vec<char>],
-    cols: usize,
-) -> usize {
-    map.iter()
-        .enumerate()
-        .filter(|(i, row)| row[(i * SLOPE_X) % cols] == '#')
-        .count()
-}
-
-fn solve_already_parsed<T: AsRef<[Vec<char>]>>(map: &T) -> Option<usize> {
-    let map = map.as_ref();
-    if let Some(row) = map.get(0) {
-        Some(try_path(map, row.len()))
-    } else {
-        None
+fn solve_already_parsed<T: AsRef<[usize]>>(input: &T) -> Option<usize> {
+    let input =
+        input.as_ref().iter().copied().chain(Some(0)).collect::<HashSet<_>>();
+    let max = *input.iter().max()?;
+    let mut paths_heap = BinaryHeap::new();
+    let mut paths_count = HashMap::new();
+    paths_count.insert(max, 1);
+    paths_heap.push(max);
+    while let Some(path) = paths_heap.pop() {
+        let count = paths_count.remove(&path)?;
+        if path == 0 {
+            return Some(count);
+        }
+        for step in 1..=3 {
+            if path < step {
+                continue;
+            }
+            let next = path - step;
+            if !input.contains(&next) {
+                continue;
+            }
+            match paths_count.entry(next) {
+                Entry::Occupied(mut entry) => {
+                    *entry.get_mut() += count;
+                },
+                Entry::Vacant(entry) => {
+                    entry.insert(count);
+                    paths_heap.push(next);
+                },
+            }
+        }
     }
+    None
 }
 
 const ITERATIONS: usize = 10000;
