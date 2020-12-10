@@ -33,7 +33,7 @@ fn solve_already_parsed<T: AsRef<[usize]>>(input: &T) -> Option<usize> {
     })
 }
 
-const ITERATIONS: usize = 1;
+const ITERATIONS: usize = 10000;
 
 fn main() {
     benchmarked_main(parse, solve_already_parsed, ITERATIONS);
