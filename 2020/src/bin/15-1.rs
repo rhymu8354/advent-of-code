@@ -29,7 +29,6 @@ fn solve_already_parsed<T: AsRef<[usize]>>(input: &T) -> Option<usize> {
             //   speak 0.
             // * Otherwise, speak the number of turns between the two turns
             //   in which that number was last spoken.
-            // *
             .unwrap_or_else(|| {
                 turn_last_spoken
                     .map(|last_turn| turn - last_turn - 1)
