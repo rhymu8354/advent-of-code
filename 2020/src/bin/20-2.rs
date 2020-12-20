@@ -7,6 +7,8 @@ use std::{
     panic,
 };
 
+const PICTURE_SIZE_TILES: usize = 12;
+
 enum ParsePhase {
     Header,
     Body(usize),
@@ -14,7 +16,8 @@ enum ParsePhase {
 }
 
 fn parse(input: &str) -> HashMap<usize, Vec<Vec<char>>> {
-    let mut data = HashMap::with_capacity(SIZE * SIZE);
+    let mut data =
+        HashMap::with_capacity(PICTURE_SIZE_TILES * PICTURE_SIZE_TILES);
     let mut parse_phase = ParsePhase::Header;
     let mut id = 0;
     let mut body = Vec::with_capacity(10);
@@ -65,34 +68,38 @@ const BOTTOM: [usize; ORIENTATION_SCANS.len()] = [6, 5, 4, 7, 2, 1, 0, 3];
 const LEFT: [usize; ORIENTATION_SCANS.len()] = [5, 4, 7, 6, 1, 0, 3, 2];
 const RIGHT: [usize; ORIENTATION_SCANS.len()] = [1, 2, 3, 0, 5, 6, 7, 4];
 
-struct OrientationScan<'a> {
-    tile: &'a [Vec<char>],
+struct OrientationScan {
     ox: isize,
     oy: isize,
     sx: isize,
     sy: isize,
     x: isize,
     y: isize,
-    dx1: isize,
-    dy1: isize,
-    dx2: isize,
-    dy2: isize,
+    dx: isize,
+    dy: isize,
+    sx1: isize,
+    sy1: isize,
+    sx2: isize,
+    sy2: isize,
 }
 
-impl<'a> Iterator for OrientationScan<'a> {
-    type Item = &'a char;
+impl Iterator for OrientationScan {
+    type Item = (usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.y < self.sy {
-            let ch = &self.tile
-                [(self.oy + self.dy1 * self.x + self.dy2 * self.y) as usize]
-                [(self.ox + self.dx1 * self.x + self.dx2 * self.y) as usize];
-            self.x += 1;
-            if self.x == self.sx {
-                self.x = 0;
-                self.y += 1;
+        if self.dy < self.sy {
+            let x = (self.ox
+                + self.sx1 * (self.x + self.dx)
+                + self.sx2 * (self.y + self.dy)) as usize;
+            let y = (self.oy
+                + self.sy1 * (self.x + self.dx)
+                + self.sy2 * (self.y + self.dy)) as usize;
+            self.dx += 1;
+            if self.dx == self.sx {
+                self.dx = 0;
+                self.dy += 1;
             }
-            Some(ch)
+            Some((x, y))
         } else {
             None
         }
@@ -100,25 +107,27 @@ impl<'a> Iterator for OrientationScan<'a> {
 }
 
 fn scan(
-    tile: &[Vec<char>],
     orientation: usize,
     size: usize,
+    x: usize,
+    y: usize,
     sx: usize,
     sy: usize,
 ) -> OrientationScan {
     let (ox, oy, dx1, dy1, dx2, dy2) = ORIENTATION_SCANS[orientation];
     OrientationScan {
-        tile,
         ox: ox * (size - 1) as isize,
         oy: oy * (size - 1) as isize,
         sx: sx as isize,
         sy: sy as isize,
-        x: 0,
-        y: 0,
-        dx1,
-        dy1,
-        dx2,
-        dy2,
+        x: x as isize,
+        y: y as isize,
+        dx: 0,
+        dy: 0,
+        sx1: dx1,
+        sy1: dy1,
+        sx2: dx2,
+        sy2: dy2,
     }
 }
 
@@ -128,9 +137,9 @@ fn edge_match(
     second: &[Vec<char>],
     second_orientation: usize,
 ) -> bool {
-    scan(first, first_orientation, SIZE, SIZE, 1)
-        .zip(scan(second, second_orientation, SIZE, SIZE, 1))
-        .all(|(first_char, second_char)| first_char == second_char)
+    scan(first_orientation, 10, 0, 0, 10, 1)
+        .zip(scan(second_orientation, 10, 0, 0, 10, 1))
+        .all(|((x1, y1), (x2, y2))| first[y1][x1] == second[y2][x2])
 }
 
 fn fits(
@@ -190,44 +199,29 @@ fn find_fit(
     }
 }
 
-const SIZE: usize = 12;
-
-const SEA_MONSTER: [[char; 20]; 3] = [
-    [
-        ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
-        ' ', ' ', ' ', ' ', '#', ' ',
-    ],
-    [
-        '#', ' ', ' ', ' ', ' ', '#', '#', ' ', ' ', ' ', ' ', '#', '#', ' ',
-        ' ', ' ', ' ', '#', '#', '#',
-    ],
-    [
-        ' ', '#', ' ', ' ', '#', ' ', ' ', '#', ' ', ' ', '#', ' ', ' ', '#',
-        ' ', ' ', '#', ' ', ' ', ' ',
-    ],
+const SEA_MONSTER: [char; 20 * 3] = [
+    ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+    ' ', ' ', ' ', '#', ' ', '#', ' ', ' ', ' ', ' ', '#', '#', ' ', ' ', ' ',
+    ' ', '#', '#', ' ', ' ', ' ', ' ', '#', '#', '#', ' ', '#', ' ', ' ', '#',
+    ' ', ' ', '#', ' ', ' ', '#', ' ', ' ', '#', ' ', ' ', '#', ' ', ' ', ' ',
 ];
 
 fn sea_monsters(
-    picture: &[[char; SIZE * 8]; SIZE * 8],
+    picture: &[Vec<char>],
     orientation: usize,
 ) -> Option<usize> {
-    let mut filtered_picture = *picture;
+    let mut filtered_picture = picture.to_vec();
     let mut monsters = 0;
-    let (ox, oy, dx1, dy1, dx2, dy2) = ORIENTATION_SCANS[orientation];
-    let ox = ox * ((SIZE * 8) - 1) as isize;
-    let oy = oy * ((SIZE * 8) - 1) as isize;
-    while let Some((x, y)) = (0..=SIZE * 8 - 3).find_map(|y| {
-        (0..=SIZE * 8 - 20).find_map(|x| {
-            if (0..3).all(|dy| {
-                let yi = (y + dy) as isize;
-                (0..20).all(|dx| {
-                    let xi = (x + dx) as isize;
-                    SEA_MONSTER[dy][dx] != '#'
-                        || filtered_picture[(oy + dy1 * xi + dy2 * yi) as usize]
-                            [(ox + dx1 * xi + dx2 * yi) as usize]
-                            == '#'
-                })
-            }) {
+    while let Some((x, y)) = (0..=PICTURE_SIZE_TILES * 8 - 3).find_map(|y| {
+        (0..=PICTURE_SIZE_TILES * 8 - 20).find_map(|x| {
+            let found_sea_monster =
+                scan(orientation, PICTURE_SIZE_TILES * 8, x, y, 20, 3)
+                    .zip(SEA_MONSTER.iter())
+                    .all(|((x, y), sea_monster_char)| {
+                        *sea_monster_char != '#'
+                            || filtered_picture[y][x] == '#'
+                    });
+            if found_sea_monster {
                 Some((x, y))
             } else {
                 None
@@ -235,32 +229,27 @@ fn sea_monsters(
         })
     }) {
         monsters += 1;
-        for (dy, sea_monster_row) in SEA_MONSTER.iter().enumerate() {
-            let yi = (y + dy) as isize;
-            for (dx, sea_monster_cell) in sea_monster_row.iter().enumerate() {
-                let xi = (x + dx) as isize;
-                if *sea_monster_cell == '#' {
-                    filtered_picture[(oy + dy1 * xi + dy2 * yi) as usize]
-                        [(ox + dx1 * xi + dx2 * yi) as usize] = 'O';
-                }
+        for ((x, y), sea_monster_cell) in
+            scan(orientation, PICTURE_SIZE_TILES * 8, x, y, 20, 3)
+                .zip(SEA_MONSTER.iter())
+        {
+            if *sea_monster_cell == '#' {
+                filtered_picture[y][x] = 'O';
             }
         }
     }
     if monsters == 0 {
         None
     } else {
-        // for y in 0..SIZE * 8 {
-        //     let yi = y as isize;
-        //     for x in 0..SIZE * 8 {
-        //         let xi = x as isize;
-        //         print!(
-        //             "{}",
-        //             filtered_picture[(oy + dy1 * xi + dy2 * yi) as usize]
-        //                 [(ox + dx1 * xi + dx2 * yi) as usize]
-        //         );
-        //     }
-        //     println!()
-        // }
+        #[cfg(debug)]
+        for (i, (x, y)) in
+            scan(orientation, SIZE * 8, 0, 0, SIZE * 8, SIZE * 8).enumerate()
+        {
+            print!("{}", filtered_picture[y][x]);
+            if (i + 1) % (SIZE * 8) == 0 {
+                println!()
+            }
+        }
         Some(
             filtered_picture
                 .iter()
@@ -273,7 +262,7 @@ fn sea_monsters(
 fn solve_already_parsed(
     input: &HashMap<usize, Vec<Vec<char>>>
 ) -> Option<usize> {
-    let mut tiles = vec![vec![None; SIZE]; SIZE];
+    let mut tiles = vec![vec![None; PICTURE_SIZE_TILES]; PICTURE_SIZE_TILES];
     let mut unused_tiles = input.keys().copied().collect::<HashSet<_>>();
     let first_tile = *unused_tiles
         .iter()
@@ -301,8 +290,8 @@ fn solve_already_parsed(
         orientation: 0,
     });
     unused_tiles.remove(&first_tile);
-    for y in 0..SIZE {
-        for x in 0..SIZE {
+    for y in 0..PICTURE_SIZE_TILES {
+        for x in 0..PICTURE_SIZE_TILES {
             if x == 0 && y == 0 {
                 continue;
             }
@@ -312,28 +301,22 @@ fn solve_already_parsed(
             }
         }
     }
-    let mut picture = [[' '; SIZE * 8]; SIZE * 8];
+    let mut picture =
+        vec![vec![' '; PICTURE_SIZE_TILES * 8]; PICTURE_SIZE_TILES * 8];
     for (ty, tile_row) in tiles.into_iter().enumerate() {
         for (tx, mut tile) in tile_row.into_iter().enumerate() {
             let tile = tile.take().unwrap();
             let orientation = tile.orientation;
             let tile = input.get(&tile.id).unwrap();
-            let (ox, oy, dx1, dy1, dx2, dy2) = ORIENTATION_SCANS[orientation];
-            for y in 0..8 {
-                let yi = (y + 1) as isize;
-                for x in 0..8 {
-                    let xi = (x + 1) as isize;
-                    picture[ty * 8 + y][tx * 8 + x] = tile
-                        [(oy * 9 + dy1 * xi + dy2 * yi) as usize]
-                        [(ox * 9 + dx1 * xi + dx2 * yi) as usize];
-                }
+            for (i, (x, y)) in scan(orientation, 10, 1, 1, 8, 8).enumerate() {
+                picture[ty * 8 + i / 8][tx * 8 + i % 8] = tile[y][x];
             }
         }
     }
     (0..8).find_map(|orientation| sea_monsters(&picture, orientation))
 }
 
-const ITERATIONS: usize = 100;
+const ITERATIONS: usize = 1;
 
 fn main() {
     benchmarked_main(parse, solve_already_parsed, ITERATIONS);

@@ -7,6 +7,8 @@ use std::{
     panic,
 };
 
+const PICTURE_SIZE_TILES: usize = 12;
+
 enum ParsePhase {
     Header,
     Body(usize),
@@ -14,7 +16,8 @@ enum ParsePhase {
 }
 
 fn parse(input: &str) -> HashMap<usize, Vec<Vec<char>>> {
-    let mut data = HashMap::with_capacity(SIZE * SIZE);
+    let mut data =
+        HashMap::with_capacity(PICTURE_SIZE_TILES * PICTURE_SIZE_TILES);
     let mut parse_phase = ParsePhase::Header;
     let mut id = 0;
     let mut body = Vec::with_capacity(10);
@@ -49,147 +52,94 @@ struct Tile {
     orientation: usize,
 }
 
-const COORDS: [[(usize, usize); 10]; 8] = [
-    [
-        // 0
-        (9, 0),
-        (9, 1),
-        (9, 2),
-        (9, 3),
-        (9, 4),
-        (9, 5),
-        (9, 6),
-        (9, 7),
-        (9, 8),
-        (9, 9),
-    ],
-    [
-        // 1
-        (9, 9),
-        (8, 9),
-        (7, 9),
-        (6, 9),
-        (5, 9),
-        (4, 9),
-        (3, 9),
-        (2, 9),
-        (1, 9),
-        (0, 9),
-    ],
-    [
-        // 2
-        (0, 9),
-        (0, 8),
-        (0, 7),
-        (0, 6),
-        (0, 5),
-        (0, 4),
-        (0, 3),
-        (0, 2),
-        (0, 1),
-        (0, 0),
-    ],
-    [
-        // 3
-        (0, 0),
-        (1, 0),
-        (2, 0),
-        (3, 0),
-        (4, 0),
-        (5, 0),
-        (6, 0),
-        (7, 0),
-        (8, 0),
-        (9, 0),
-    ],
-    [
-        // 4
-        (0, 0),
-        (0, 1),
-        (0, 2),
-        (0, 3),
-        (0, 4),
-        (0, 5),
-        (0, 6),
-        (0, 7),
-        (0, 8),
-        (0, 9),
-    ],
-    [
-        // 5
-        (0, 9),
-        (1, 9),
-        (2, 9),
-        (3, 9),
-        (4, 9),
-        (5, 9),
-        (6, 9),
-        (7, 9),
-        (8, 9),
-        (9, 9),
-    ],
-    [
-        // 6
-        (9, 9),
-        (9, 8),
-        (9, 7),
-        (9, 6),
-        (9, 5),
-        (9, 4),
-        (9, 3),
-        (9, 2),
-        (9, 1),
-        (9, 0),
-    ],
-    [
-        // 7
-        (9, 0),
-        (8, 0),
-        (7, 0),
-        (6, 0),
-        (5, 0),
-        (4, 0),
-        (3, 0),
-        (2, 0),
-        (1, 0),
-        (0, 0),
-    ],
+const ORIENTATION_SCANS: &[(isize, isize, isize, isize, isize, isize)] = &[
+    (0, 0, 1, 0, 0, 1),   // 0
+    (1, 0, 0, 1, -1, 0),  // 1
+    (1, 1, -1, 0, 0, -1), // 2
+    (0, 1, 0, -1, 1, 0),  // 3
+    (1, 0, -1, 0, 0, 1),  // 4
+    (0, 0, 0, 1, 1, 0),   // 5
+    (0, 1, 1, 0, 0, -1),  // 6
+    (1, 1, 0, -1, -1, 0), // 7
 ];
 
-const L2R: [usize; 8] = [4, 7, 6, 5, 0, 3, 2, 1];
-const L2T: [usize; 8] = [5, 4, 7, 6, 1, 0, 3, 2];
-const L2B: [usize; 8] = [3, 0, 1, 2, 7, 4, 5, 6];
+const TOP: [usize; ORIENTATION_SCANS.len()] = [0, 1, 2, 3, 4, 5, 6, 7];
+const BOTTOM: [usize; ORIENTATION_SCANS.len()] = [6, 5, 4, 7, 2, 1, 0, 3];
+const LEFT: [usize; ORIENTATION_SCANS.len()] = [5, 4, 7, 6, 1, 0, 3, 2];
+const RIGHT: [usize; ORIENTATION_SCANS.len()] = [1, 2, 3, 0, 5, 6, 7, 4];
 
-fn left_right_match(
-    left: &[Vec<char>],
-    left_orientation: usize,
-    right: &[Vec<char>],
-    right_orientation: usize,
-) -> bool {
-    for i in 0..10 {
-        let (left_x, left_y) = COORDS[left_orientation][i];
-        let (right_x, right_y) = COORDS[L2R[right_orientation]][i];
-        if left[left_y][left_x] != right[right_y][right_x] {
-            return false;
-        }
-    }
-    true
+struct OrientationScan {
+    ox: isize,
+    oy: isize,
+    sx: isize,
+    sy: isize,
+    x: isize,
+    y: isize,
+    dx: isize,
+    dy: isize,
+    sx1: isize,
+    sy1: isize,
+    sx2: isize,
+    sy2: isize,
 }
 
-fn top_bottom_match(
-    top: &[Vec<char>],
-    top_orientation: usize,
-    bottom: &[Vec<char>],
-    bottom_orientation: usize,
-) -> bool {
-    for i in 0..10 {
-        let (top_x, top_y) = COORDS[L2T[top_orientation]][i];
-        let (bottom_x, bottom_y) = COORDS[L2B[bottom_orientation]][i];
-        if top[top_y][top_x] != bottom[bottom_y][bottom_x] {
-            return false;
+impl Iterator for OrientationScan {
+    type Item = (usize, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.dy < self.sy {
+            let x = (self.ox
+                + self.sx1 * (self.x + self.dx)
+                + self.sx2 * (self.y + self.dy)) as usize;
+            let y = (self.oy
+                + self.sy1 * (self.x + self.dx)
+                + self.sy2 * (self.y + self.dy)) as usize;
+            self.dx += 1;
+            if self.dx == self.sx {
+                self.dx = 0;
+                self.dy += 1;
+            }
+            Some((x, y))
+        } else {
+            None
         }
     }
-    true
+}
+
+fn scan(
+    orientation: usize,
+    size: usize,
+    x: usize,
+    y: usize,
+    sx: usize,
+    sy: usize,
+) -> OrientationScan {
+    let (ox, oy, dx1, dy1, dx2, dy2) = ORIENTATION_SCANS[orientation];
+    OrientationScan {
+        ox: ox * (size - 1) as isize,
+        oy: oy * (size - 1) as isize,
+        sx: sx as isize,
+        sy: sy as isize,
+        x: x as isize,
+        y: y as isize,
+        dx: 0,
+        dy: 0,
+        sx1: dx1,
+        sy1: dy1,
+        sx2: dx2,
+        sy2: dy2,
+    }
+}
+
+fn edge_match(
+    first: &[Vec<char>],
+    first_orientation: usize,
+    second: &[Vec<char>],
+    second_orientation: usize,
+) -> bool {
+    scan(first_orientation, 10, 0, 0, 10, 1)
+        .zip(scan(second_orientation, 10, 0, 0, 10, 1))
+        .all(|((x1, y1), (x2, y2))| first[y1][x1] == second[y2][x2])
 }
 
 fn fits(
@@ -204,11 +154,11 @@ fn fits(
     if x > 0 {
         if let Some(left_tile) = &tiles[y][x - 1] {
             let left = input.get(&left_tile.id).unwrap();
-            if !left_right_match(
+            if !edge_match(
                 left,
-                left_tile.orientation,
+                RIGHT[left_tile.orientation],
                 candidate,
-                orientation,
+                LEFT[orientation],
             ) {
                 return false;
             }
@@ -217,11 +167,11 @@ fn fits(
     if y > 0 {
         if let Some(top_tile) = &tiles[y - 1][x] {
             let top = input.get(&top_tile.id).unwrap();
-            if !top_bottom_match(
+            if !edge_match(
                 top,
-                top_tile.orientation,
+                BOTTOM[top_tile.orientation],
                 candidate,
-                orientation,
+                TOP[orientation],
             ) {
                 return false;
             }
@@ -249,12 +199,10 @@ fn find_fit(
     }
 }
 
-const SIZE: usize = 12;
-
 fn solve_already_parsed(
     input: &HashMap<usize, Vec<Vec<char>>>
 ) -> Option<usize> {
-    let mut tiles = vec![vec![None; SIZE]; SIZE];
+    let mut tiles = vec![vec![None; PICTURE_SIZE_TILES]; PICTURE_SIZE_TILES];
     let mut unused_tiles = input.keys().copied().collect::<HashSet<_>>();
     let first_tile = *unused_tiles
         .iter()
@@ -266,8 +214,13 @@ fn solve_already_parsed(
                 }
                 let other = input.get(&other_id).unwrap();
                 (0..8).any(|orientation| {
-                    left_right_match(other, orientation, candidate, 0)
-                        || top_bottom_match(other, orientation, candidate, 0)
+                    edge_match(other, RIGHT[orientation], candidate, LEFT[0])
+                        || edge_match(
+                            other,
+                            BOTTOM[orientation],
+                            candidate,
+                            TOP[0],
+                        )
                 })
             })
         })
@@ -277,8 +230,8 @@ fn solve_already_parsed(
         orientation: 0,
     });
     unused_tiles.remove(&first_tile);
-    for y in 0..SIZE {
-        for x in 0..SIZE {
+    for y in 0..PICTURE_SIZE_TILES {
+        for x in 0..PICTURE_SIZE_TILES {
             if x == 0 && y == 0 {
                 continue;
             }
@@ -290,9 +243,12 @@ fn solve_already_parsed(
     }
     Some(
         tiles[0][0].take().unwrap().id
-            * tiles[SIZE - 1][0].take().unwrap().id
-            * tiles[SIZE - 1][SIZE - 1].take().unwrap().id
-            * tiles[0][SIZE - 1].take().unwrap().id,
+            * tiles[PICTURE_SIZE_TILES - 1][0].take().unwrap().id
+            * tiles[PICTURE_SIZE_TILES - 1][PICTURE_SIZE_TILES - 1]
+                .take()
+                .unwrap()
+                .id
+            * tiles[0][PICTURE_SIZE_TILES - 1].take().unwrap().id,
     )
 }
 
