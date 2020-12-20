@@ -14,10 +14,10 @@ enum ParsePhase {
 }
 
 fn parse(input: &str) -> HashMap<usize, Vec<Vec<char>>> {
-    let mut data = HashMap::new();
+    let mut data = HashMap::with_capacity(SIZE * SIZE);
     let mut parse_phase = ParsePhase::Header;
     let mut id = 0;
-    let mut body = Vec::new();
+    let mut body = Vec::with_capacity(10);
     for line in input.lines().map(|line| line.trim()) {
         match parse_phase {
             ParsePhase::Header => {
@@ -28,7 +28,7 @@ fn parse(input: &str) -> HashMap<usize, Vec<Vec<char>>> {
                 body.push(line.chars().collect::<Vec<_>>());
                 parse_phase = if row_num == 9 {
                     data.insert(id, body);
-                    body = Vec::new();
+                    body = Vec::with_capacity(10);
                     ParsePhase::Separator
                 } else {
                     ParsePhase::Body(row_num + 1)
@@ -49,158 +49,88 @@ struct Tile {
     orientation: usize,
 }
 
-const COORDS: [[(usize, usize); 10]; 8] = [
-    [
-        // 0
-        (9, 0),
-        (9, 1),
-        (9, 2),
-        (9, 3),
-        (9, 4),
-        (9, 5),
-        (9, 6),
-        (9, 7),
-        (9, 8),
-        (9, 9),
-    ],
-    [
-        // 1
-        (9, 9),
-        (8, 9),
-        (7, 9),
-        (6, 9),
-        (5, 9),
-        (4, 9),
-        (3, 9),
-        (2, 9),
-        (1, 9),
-        (0, 9),
-    ],
-    [
-        // 2
-        (0, 9),
-        (0, 8),
-        (0, 7),
-        (0, 6),
-        (0, 5),
-        (0, 4),
-        (0, 3),
-        (0, 2),
-        (0, 1),
-        (0, 0),
-    ],
-    [
-        // 3
-        (0, 0),
-        (1, 0),
-        (2, 0),
-        (3, 0),
-        (4, 0),
-        (5, 0),
-        (6, 0),
-        (7, 0),
-        (8, 0),
-        (9, 0),
-    ],
-    [
-        // 4
-        (0, 0),
-        (0, 1),
-        (0, 2),
-        (0, 3),
-        (0, 4),
-        (0, 5),
-        (0, 6),
-        (0, 7),
-        (0, 8),
-        (0, 9),
-    ],
-    [
-        // 5
-        (0, 9),
-        (1, 9),
-        (2, 9),
-        (3, 9),
-        (4, 9),
-        (5, 9),
-        (6, 9),
-        (7, 9),
-        (8, 9),
-        (9, 9),
-    ],
-    [
-        // 6
-        (9, 9),
-        (9, 8),
-        (9, 7),
-        (9, 6),
-        (9, 5),
-        (9, 4),
-        (9, 3),
-        (9, 2),
-        (9, 1),
-        (9, 0),
-    ],
-    [
-        // 7
-        (9, 0),
-        (8, 0),
-        (7, 0),
-        (6, 0),
-        (5, 0),
-        (4, 0),
-        (3, 0),
-        (2, 0),
-        (1, 0),
-        (0, 0),
-    ],
+const ORIENTATION_SCANS: &[(isize, isize, isize, isize, isize, isize)] = &[
+    (0, 0, 1, 0, 0, 1),   // 0
+    (1, 0, 0, 1, -1, 0),  // 1
+    (1, 1, -1, 0, 0, -1), // 2
+    (0, 1, 0, -1, 1, 0),  // 3
+    (1, 0, -1, 0, 0, 1),  // 4
+    (0, 0, 0, 1, 1, 0),   // 5
+    (0, 1, 1, 0, 0, -1),  // 6
+    (1, 1, 0, -1, -1, 0), // 7
 ];
 
-const L2R: [usize; 8] = [4, 7, 6, 5, 0, 3, 2, 1];
-const L2T: [usize; 8] = [5, 4, 7, 6, 1, 0, 3, 2];
-const L2B: [usize; 8] = [3, 0, 1, 2, 7, 4, 5, 6];
+const TOP: [usize; ORIENTATION_SCANS.len()] = [0, 1, 2, 3, 4, 5, 6, 7];
+const BOTTOM: [usize; ORIENTATION_SCANS.len()] = [6, 5, 4, 7, 2, 1, 0, 3];
+const LEFT: [usize; ORIENTATION_SCANS.len()] = [5, 4, 7, 6, 1, 0, 3, 2];
+const RIGHT: [usize; ORIENTATION_SCANS.len()] = [1, 2, 3, 0, 5, 6, 7, 4];
 
-const SCAN_DIR: [(isize, isize, isize, isize, isize, isize); 8] = [
-    (0, 0, 1, 0, 0, 1),
-    (1, 0, 0, 1, -1, 0),
-    (1, 1, -1, 0, 0, -1),
-    (0, 1, 0, -1, 1, 0),
-    (1, 0, -1, 0, 0, 1),
-    (0, 0, 0, 1, 1, 0),
-    (0, 1, 1, 0, 0, -1),
-    (1, 1, 0, -1, -1, 0),
-];
-
-fn left_right_match(
-    left: &[Vec<char>],
-    left_orientation: usize,
-    right: &[Vec<char>],
-    right_orientation: usize,
-) -> bool {
-    for i in 0..10 {
-        let (left_x, left_y) = COORDS[left_orientation][i];
-        let (right_x, right_y) = COORDS[L2R[right_orientation]][i];
-        if left[left_y][left_x] != right[right_y][right_x] {
-            return false;
-        }
-    }
-    true
+struct OrientationScan<'a> {
+    tile: &'a [Vec<char>],
+    ox: isize,
+    oy: isize,
+    sx: isize,
+    sy: isize,
+    x: isize,
+    y: isize,
+    dx1: isize,
+    dy1: isize,
+    dx2: isize,
+    dy2: isize,
 }
 
-fn top_bottom_match(
-    top: &[Vec<char>],
-    top_orientation: usize,
-    bottom: &[Vec<char>],
-    bottom_orientation: usize,
-) -> bool {
-    for i in 0..10 {
-        let (top_x, top_y) = COORDS[L2T[top_orientation]][i];
-        let (bottom_x, bottom_y) = COORDS[L2B[bottom_orientation]][i];
-        if top[top_y][top_x] != bottom[bottom_y][bottom_x] {
-            return false;
+impl<'a> Iterator for OrientationScan<'a> {
+    type Item = &'a char;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.y < self.sy {
+            let ch = &self.tile
+                [(self.oy + self.dy1 * self.x + self.dy2 * self.y) as usize]
+                [(self.ox + self.dx1 * self.x + self.dx2 * self.y) as usize];
+            self.x += 1;
+            if self.x == self.sx {
+                self.x = 0;
+                self.y += 1;
+            }
+            Some(ch)
+        } else {
+            None
         }
     }
-    true
+}
+
+fn scan(
+    tile: &[Vec<char>],
+    orientation: usize,
+    size: usize,
+    sx: usize,
+    sy: usize,
+) -> OrientationScan {
+    let (ox, oy, dx1, dy1, dx2, dy2) = ORIENTATION_SCANS[orientation];
+    OrientationScan {
+        tile,
+        ox: ox * (size - 1) as isize,
+        oy: oy * (size - 1) as isize,
+        sx: sx as isize,
+        sy: sy as isize,
+        x: 0,
+        y: 0,
+        dx1,
+        dy1,
+        dx2,
+        dy2,
+    }
+}
+
+fn edge_match(
+    first: &[Vec<char>],
+    first_orientation: usize,
+    second: &[Vec<char>],
+    second_orientation: usize,
+) -> bool {
+    scan(first, first_orientation, SIZE, SIZE, 1)
+        .zip(scan(second, second_orientation, SIZE, SIZE, 1))
+        .all(|(first_char, second_char)| first_char == second_char)
 }
 
 fn fits(
@@ -215,11 +145,11 @@ fn fits(
     if x > 0 {
         if let Some(left_tile) = &tiles[y][x - 1] {
             let left = input.get(&left_tile.id).unwrap();
-            if !left_right_match(
+            if !edge_match(
                 left,
-                left_tile.orientation,
+                RIGHT[left_tile.orientation],
                 candidate,
-                orientation,
+                LEFT[orientation],
             ) {
                 return false;
             }
@@ -228,11 +158,11 @@ fn fits(
     if y > 0 {
         if let Some(top_tile) = &tiles[y - 1][x] {
             let top = input.get(&top_tile.id).unwrap();
-            if !top_bottom_match(
+            if !edge_match(
                 top,
-                top_tile.orientation,
+                BOTTOM[top_tile.orientation],
                 candidate,
-                orientation,
+                TOP[orientation],
             ) {
                 return false;
             }
@@ -283,7 +213,7 @@ fn sea_monsters(
 ) -> Option<usize> {
     let mut filtered_picture = *picture;
     let mut monsters = 0;
-    let (ox, oy, dx1, dy1, dx2, dy2) = SCAN_DIR[orientation];
+    let (ox, oy, dx1, dy1, dx2, dy2) = ORIENTATION_SCANS[orientation];
     let ox = ox * ((SIZE * 8) - 1) as isize;
     let oy = oy * ((SIZE * 8) - 1) as isize;
     while let Some((x, y)) = (0..=SIZE * 8 - 3).find_map(|y| {
@@ -355,8 +285,13 @@ fn solve_already_parsed(
                 }
                 let other = input.get(&other_id).unwrap();
                 (0..8).any(|orientation| {
-                    left_right_match(other, orientation, candidate, 0)
-                        || top_bottom_match(other, orientation, candidate, 0)
+                    edge_match(other, RIGHT[orientation], candidate, LEFT[0])
+                        || edge_match(
+                            other,
+                            BOTTOM[orientation],
+                            candidate,
+                            TOP[0],
+                        )
                 })
             })
         })
@@ -383,7 +318,7 @@ fn solve_already_parsed(
             let tile = tile.take().unwrap();
             let orientation = tile.orientation;
             let tile = input.get(&tile.id).unwrap();
-            let (ox, oy, dx1, dy1, dx2, dy2) = SCAN_DIR[orientation];
+            let (ox, oy, dx1, dy1, dx2, dy2) = ORIENTATION_SCANS[orientation];
             for y in 0..8 {
                 let yi = (y + 1) as isize;
                 for x in 0..8 {

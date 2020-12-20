@@ -14,10 +14,10 @@ enum ParsePhase {
 }
 
 fn parse(input: &str) -> HashMap<usize, Vec<Vec<char>>> {
-    let mut data = HashMap::new();
+    let mut data = HashMap::with_capacity(SIZE * SIZE);
     let mut parse_phase = ParsePhase::Header;
     let mut id = 0;
-    let mut body = Vec::new();
+    let mut body = Vec::with_capacity(10);
     for line in input.lines().map(|line| line.trim()) {
         match parse_phase {
             ParsePhase::Header => {
@@ -28,7 +28,7 @@ fn parse(input: &str) -> HashMap<usize, Vec<Vec<char>>> {
                 body.push(line.chars().collect::<Vec<_>>());
                 parse_phase = if row_num == 9 {
                     data.insert(id, body);
-                    body = Vec::new();
+                    body = Vec::with_capacity(10);
                     ParsePhase::Separator
                 } else {
                     ParsePhase::Body(row_num + 1)
