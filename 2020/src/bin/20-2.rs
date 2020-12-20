@@ -316,7 +316,7 @@ fn solve_already_parsed(
     (0..8).find_map(|orientation| sea_monsters(&picture, orientation))
 }
 
-const ITERATIONS: usize = 1;
+const ITERATIONS: usize = 100;
 
 fn main() {
     benchmarked_main(parse, solve_already_parsed, ITERATIONS);
