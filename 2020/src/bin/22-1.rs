@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use aoc_2020::benchmarked_main;
 
 enum ParsePhase {
@@ -5,20 +7,20 @@ enum ParsePhase {
     Card,
 }
 
-fn parse(input: &str) -> Vec<Vec<usize>> {
+fn parse(input: &str) -> Vec<VecDeque<usize>> {
     let mut data = vec![];
-    let mut cards = vec![];
+    let mut cards = VecDeque::new();
     let mut parse_phase = ParsePhase::Header;
     for line in input.lines().map(|line| line.trim()) {
         if line.is_empty() {
             data.push(cards);
-            cards = vec![];
+            cards = VecDeque::new();
             parse_phase = ParsePhase::Header;
         } else {
             match parse_phase {
                 ParsePhase::Header => parse_phase = ParsePhase::Card,
                 ParsePhase::Card => {
-                    cards.push(line.parse().unwrap());
+                    cards.push_back(line.parse().unwrap());
                 },
             }
         }
@@ -27,7 +29,7 @@ fn parse(input: &str) -> Vec<Vec<usize>> {
     data
 }
 
-fn non_empty_deck_index(decks: &[Vec<usize>]) -> usize {
+fn non_empty_deck_index(decks: &[VecDeque<usize>]) -> usize {
     decks
         .iter()
         .enumerate()
@@ -54,14 +56,18 @@ fn decide_hand_winner_no_sub_game(hand: &[usize]) -> usize {
     .0
 }
 
-fn solve_already_parsed<T: AsRef<[Vec<usize>]>>(input: &T) -> Option<usize> {
+fn solve_already_parsed<T: AsRef<[VecDeque<usize>]>>(
+    input: &T
+) -> Option<usize> {
     let mut decks = input.as_ref().to_vec();
     while decks.iter().all(|deck| !deck.is_empty()) {
-        let hand =
-            decks.iter_mut().map(|deck| deck.remove(0)).collect::<Vec<_>>();
+        let hand = decks
+            .iter_mut()
+            .map(|deck| deck.pop_front().unwrap())
+            .collect::<Vec<_>>();
         let hand_winner = decide_hand_winner_no_sub_game(&hand);
-        decks[hand_winner].push(hand[hand_winner]);
-        decks[hand_winner].push(hand[1 - hand_winner]);
+        decks[hand_winner].push_back(hand[hand_winner]);
+        decks[hand_winner].push_back(hand[1 - hand_winner]);
     }
     let game_winner = non_empty_deck_index(&decks);
     Some(
