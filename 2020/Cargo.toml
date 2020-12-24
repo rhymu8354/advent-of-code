@@ -198,6 +198,14 @@ path = "src/bin/23-1.rs"
 name = "aoc-2020-23-2"
 path = "src/bin/23-2.rs"
 
+[[bin]]
+name = "aoc-2020-24-1"
+path = "src/bin/24-1.rs"
+
+[[bin]]
+name = "aoc-2020-24-2"
+path = "src/bin/24-2.rs"
+
 [dependencies]
 # anyhow = "1.0"
 # async-ctrlc = "1.2"
